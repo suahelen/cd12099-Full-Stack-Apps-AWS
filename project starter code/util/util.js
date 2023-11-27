@@ -1,5 +1,6 @@
 import fs from "fs";
-import Jimp from "jimp";
+import jimp from "jimp";
+import axios from "axios";
 
 
 // filterImageFromURL
@@ -9,22 +10,29 @@ import Jimp from "jimp";
 //    inputURL: string - a publicly accessible url to an image file
 // RETURNS
 //    an absolute path to a filtered image locally saved file
- export async function filterImageFromURL(inputURL) {
+export async function filterImageFromURL(inputURL) {
   return new Promise(async (resolve, reject) => {
-    try {
-      const photo = await Jimp.read(inputURL);
-      const outpath =
-        "/tmp/filtered." + Math.floor(Math.random() * 2000) + ".jpg";
-      await photo
-        .resize(256, 256) // resize
-        .quality(60) // set JPEG quality
-        .greyscale() // set greyscale
-        .write(outpath, (img) => {
-          resolve(outpath);
-        });
-    } catch (error) {
-      reject(error);
-    }
+    axios({
+      method: 'get',
+      url: inputURL,
+      responseType: 'arraybuffer'
+    })
+      .then(function ({ data: imageBuffer }) {
+        return jimp.read(imageBuffer)
+      })
+      .then(photo => {
+        const outpath = '/tmp/filtered.' + Math.floor(Math.random() * 2000) + '.jpg';
+        photo
+          .resize(256, 256) // resize
+          .quality(60) // set JPEG quality
+          .greyscale() // set greyscale
+          .write(outpath, (img) => {
+            resolve(outpath);
+          });
+      }).catch(err => {
+        console.error(err);
+        reject("Could not read image.");
+      })
   });
 }
 
@@ -33,7 +41,7 @@ import Jimp from "jimp";
 // useful to cleanup after tasks
 // INPUTS
 //    files: Array<string> an array of absolute paths to files
- export async function deleteLocalFiles(files) {
+export async function deleteLocalFiles(files) {
   for (let file of files) {
     fs.unlinkSync(file);
   }
